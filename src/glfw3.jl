@@ -190,6 +190,40 @@ const MOUSE_BUTTON_MIDDLE    = MOUSE_BUTTON_3
 	JOYSTICK_16            = 15
 end
 
+# Gamepads
+@enum GamepadButtons::Cint begin
+	GAMEPAD_BUTTON_A            = 0
+	GAMEPAD_BUTTON_B            = 1
+	GAMEPAD_BUTTON_X            = 2
+	GAMEPAD_BUTTON_Y            = 3
+	GAMEPAD_BUTTON_LEFT_BUMPER  = 4
+	GAMEPAD_BUTTON_RIGHT_BUMPER = 5
+	GAMEPAD_BUTTON_BACK         = 6
+	GAMEPAD_BUTTON_START        = 7
+	GAMEPAD_BUTTON_GUIDE        = 8
+	GAMEPAD_BUTTON_LEFT_THUMB   = 9
+	GAMEPAD_BUTTON_RIGHT_THUMB  = 10
+	GAMEPAD_BUTTON_DPAD_UP      = 11
+	GAMEPAD_BUTTON_DPAD_RIGHT   = 12
+	GAMEPAD_BUTTON_DPAD_DOWN    = 13
+	GAMEPAD_BUTTON_DPAD_LEFT    = 14
+end
+const GAMEPAD_BUTTON_LAST     = GAMEPAD_BUTTON_DPAD_LEFT
+const GAMEPAD_BUTTON_CROSS    = GAMEPAD_BUTTON_A
+const GAMEPAD_BUTTON_CIRCLE   = GAMEPAD_BUTTON_B
+const GAMEPAD_BUTTON_SQUARE   = GAMEPAD_BUTTON_X
+const GAMEPAD_BUTTON_TRIANGLE = GAMEPAD_BUTTON_Y
+
+@enum GamepadAxes::Cint begin
+	GAMEPAD_AXIS_LEFT_X        = 0
+	GAMEPAD_AXIS_LEFT_Y        = 1
+	GAMEPAD_AXIS_RIGHT_X       = 2
+	GAMEPAD_AXIS_RIGHT_Y       = 3
+	GAMEPAD_AXIS_LEFT_TRIGGER  = 4
+	GAMEPAD_AXIS_RIGHT_TRIGGER = 5
+end
+const GAMEPAD_AXIS_LAST = GAMEPAD_AXIS_RIGHT_TRIGGER
+
 # Error codes
 @enum ErrorCode::Cint begin
 	NOT_INITIALIZED        = 0x00010001  # GLFW has not been initialized.
@@ -830,6 +864,36 @@ function GetJoystickName(joy::Joystick)
 end
 
 @callback Joystick(joy::Joystick, event::DeviceConfigEvent)
+
+# Gamepad API
+function JoystickIsGamepad(joy::Joystick)
+	require_main_thread()
+	count = Ref{Cint}()
+	glfw_bool = ccall((:glfwJoystickIsGamepad, libglfw), Cint, (Cint,), joy)
+	return glfw_bool == 1
+end
+
+function GetGamepadName(joy::Joystick)
+	require_main_thread()
+	ptr = ccall((:glfwGetGamepadName, libglfw), Cstring, (Cint,), joy)
+	if ptr != C_NULL
+		unsafe_string(ptr)
+	end
+end
+
+struct GamepadState
+	buttons::NTuple{15, Cuchar}
+	axes::NTuple{6, Cfloat}
+end
+
+function GetGamepadState(joy::Joystick)
+	require_main_thread()
+	stateptr = Ref{GamepadState}()
+	r = ccall((:glfwGetGamepadState, libglfw), Cint, (Cint, Ptr{GamepadState}), joy, stateptr)
+	if r == 1
+		stateptr[]
+	end
+end
 
 # Context handling
 MakeContextCurrent(window::Window) = ccall((:glfwMakeContextCurrent, libglfw), Cvoid, (Window,), window) # any thread
